@@ -16,6 +16,7 @@ import (
 type MigrationRecord struct {
 	VersionID int64
 	TStamp    time.Time
+	DownData  string
 	IsApplied bool // was this a result of up() or down()
 }
 

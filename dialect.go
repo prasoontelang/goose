@@ -69,7 +69,7 @@ func (pg PostgresDialect) insertVersionSQL() string {
 }
 
 func (pg PostgresDialect) dbVersionQuery(db *sql.DB) (*sql.Rows, error) {
-	rows, err := db.Query(fmt.Sprintf("SELECT version_id, is_applied from %s ORDER BY id DESC", TableName()))
+	rows, err := db.Query(fmt.Sprintf("SELECT version_id, is_applied, migration from %s ORDER BY id DESC", TableName()))
 	if err != nil {
 		return nil, err
 	}
@@ -104,7 +104,7 @@ func (m MySQLDialect) insertVersionSQL() string {
 }
 
 func (m MySQLDialect) dbVersionQuery(db *sql.DB) (*sql.Rows, error) {
-	rows, err := db.Query(fmt.Sprintf("SELECT version_id, is_applied from %s ORDER BY id DESC", TableName()))
+	rows, err := db.Query(fmt.Sprintf("SELECT version_id, is_applied, migration from %s ORDER BY id DESC", TableName()))
 	if err != nil {
 		return nil, err
 	}
@@ -138,7 +138,7 @@ func (m Sqlite3Dialect) insertVersionSQL() string {
 }
 
 func (m Sqlite3Dialect) dbVersionQuery(db *sql.DB) (*sql.Rows, error) {
-	rows, err := db.Query(fmt.Sprintf("SELECT version_id, is_applied from %s ORDER BY id DESC", TableName()))
+	rows, err := db.Query(fmt.Sprintf("SELECT version_id, is_applied, migration from %s ORDER BY id DESC", TableName()))
 	if err != nil {
 		return nil, err
 	}
@@ -173,7 +173,7 @@ func (rs RedshiftDialect) insertVersionSQL() string {
 }
 
 func (rs RedshiftDialect) dbVersionQuery(db *sql.DB) (*sql.Rows, error) {
-	rows, err := db.Query(fmt.Sprintf("SELECT version_id, is_applied from %s ORDER BY id DESC", TableName()))
+	rows, err := db.Query(fmt.Sprintf("SELECT version_id, is_applied, migration from %s ORDER BY id DESC", TableName()))
 	if err != nil {
 		return nil, err
 	}
@@ -208,7 +208,7 @@ func (m TiDBDialect) insertVersionSQL() string {
 }
 
 func (m TiDBDialect) dbVersionQuery(db *sql.DB) (*sql.Rows, error) {
-	rows, err := db.Query(fmt.Sprintf("SELECT version_id, is_applied from %s ORDER BY id DESC", TableName()))
+	rows, err := db.Query(fmt.Sprintf("SELECT version_id, is_applied, migration from %s ORDER BY id DESC", TableName()))
 	if err != nil {
 		return nil, err
 	}
