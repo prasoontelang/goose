@@ -64,7 +64,23 @@ func (m *Migration) run(db *sql.DB, direction bool) error {
 			return errors.Wrapf(err, "ERROR %v: failed to parse SQL migration file", filepath.Base(m.Source))
 		}
 
-		if err := runSQLMigration(db, statements, useTx, m.Version, direction); err != nil {
+		// get the statements in the opposite direction
+		newOffset, err := f.Seek(0, 0)
+		if err != nil {
+			return errors.Wrapf(err, "ERROR %v: failed to set offset to 0. Returned: %d", filepath.Base(m.Source), newOffset)
+		}
+		undoStatements, _, err := parseSQLMigration(f, !direction)
+		if err != nil {
+			return errors.Wrapf(err, "ERROR %v: failed to parse SQL undo migration file", filepath.Base(m.Source))
+		}
+
+		// goose type for the undo statements
+		if direction {
+			gooseDemarcation := []string{"-- +goose Up", "-- +goose Down"}
+			undoStatements = append(gooseDemarcation, undoStatements...)
+		}
+
+		if err := runSQLMigration(db, statements, useTx, undoStatements, m.Version, direction); err != nil {
 			return errors.Wrapf(err, "ERROR %v: failed to run SQL migration", filepath.Base(m.Source))
 		}
 

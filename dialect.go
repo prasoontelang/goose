@@ -16,6 +16,11 @@ type SQLDialect interface {
 
 var dialect SQLDialect = &PostgresDialect{}
 
+func dropVersionTableSQL() string {
+	return fmt.Sprintf(`-- +goose Down
+DROP TABLE %s;`, TableName())
+}
+
 // GetDialect gets the SQLDialect
 func GetDialect() SQLDialect {
 	return dialect
@@ -54,12 +59,13 @@ func (pg PostgresDialect) createVersionTableSQL() string {
                 version_id bigint NOT NULL,
                 is_applied boolean NOT NULL,
                 tstamp timestamp NULL default now(),
+                migration text NOT NULL,
                 PRIMARY KEY(id)
             );`, TableName())
 }
 
 func (pg PostgresDialect) insertVersionSQL() string {
-	return fmt.Sprintf("INSERT INTO %s (version_id, is_applied) VALUES ($1, $2);", TableName())
+	return fmt.Sprintf("INSERT INTO %s (version_id, is_applied, migration) VALUES ($1, $2, $3);", TableName())
 }
 
 func (pg PostgresDialect) dbVersionQuery(db *sql.DB) (*sql.Rows, error) {
@@ -88,12 +94,13 @@ func (m MySQLDialect) createVersionTableSQL() string {
                 version_id bigint NOT NULL,
                 is_applied boolean NOT NULL,
                 tstamp timestamp NULL default now(),
+                migration text NOT NULL,
                 PRIMARY KEY(id)
             );`, TableName())
 }
 
 func (m MySQLDialect) insertVersionSQL() string {
-	return fmt.Sprintf("INSERT INTO %s (version_id, is_applied) VALUES (?, ?);", TableName())
+	return fmt.Sprintf("INSERT INTO %s (version_id, is_applied, migration) VALUES (?, ?, ?);", TableName())
 }
 
 func (m MySQLDialect) dbVersionQuery(db *sql.DB) (*sql.Rows, error) {
@@ -121,12 +128,13 @@ func (m Sqlite3Dialect) createVersionTableSQL() string {
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 version_id INTEGER NOT NULL,
                 is_applied INTEGER NOT NULL,
+                migration text NOT NULL,
                 tstamp TIMESTAMP DEFAULT (datetime('now'))
             );`, TableName())
 }
 
 func (m Sqlite3Dialect) insertVersionSQL() string {
-	return fmt.Sprintf("INSERT INTO %s (version_id, is_applied) VALUES (?, ?);", TableName())
+	return fmt.Sprintf("INSERT INTO %s (version_id, is_applied, migration) VALUES (?, ?, ?);", TableName())
 }
 
 func (m Sqlite3Dialect) dbVersionQuery(db *sql.DB) (*sql.Rows, error) {
@@ -155,12 +163,13 @@ func (rs RedshiftDialect) createVersionTableSQL() string {
                 version_id bigint NOT NULL,
                 is_applied boolean NOT NULL,
                 tstamp timestamp NULL default sysdate,
+                migration text NOT NULL,
                 PRIMARY KEY(id)
             );`, TableName())
 }
 
 func (rs RedshiftDialect) insertVersionSQL() string {
-	return fmt.Sprintf("INSERT INTO %s (version_id, is_applied) VALUES ($1, $2);", TableName())
+	return fmt.Sprintf("INSERT INTO %s (version_id, is_applied, migration) VALUES ($1, $2, $3);", TableName())
 }
 
 func (rs RedshiftDialect) dbVersionQuery(db *sql.DB) (*sql.Rows, error) {
@@ -189,12 +198,13 @@ func (m TiDBDialect) createVersionTableSQL() string {
                 version_id bigint NOT NULL,
                 is_applied boolean NOT NULL,
                 tstamp timestamp NULL default now(),
+                migration text NOT NULL,
                 PRIMARY KEY(id)
             );`, TableName())
 }
 
 func (m TiDBDialect) insertVersionSQL() string {
-	return fmt.Sprintf("INSERT INTO %s (version_id, is_applied) VALUES (?, ?);", TableName())
+	return fmt.Sprintf("INSERT INTO %s (version_id, is_applied, migration) VALUES (?, ?, ?);", TableName())
 }
 
 func (m TiDBDialect) dbVersionQuery(db *sql.DB) (*sql.Rows, error) {
