@@ -12,6 +12,7 @@ type SQLDialect interface {
 	insertVersionSQL() string      // sql string to insert the initial version table row
 	deleteVersionSQL() string      // sql string to delete version
 	dbVersionQuery(db *sql.DB) (*sql.Rows, error)
+	addMigrationColumn(defaultVal string) string
 }
 
 var dialect SQLDialect = &PostgresDialect{}
@@ -53,6 +54,10 @@ func SetDialect(d string) error {
 // PostgresDialect struct.
 type PostgresDialect struct{}
 
+func (pg PostgresDialect) addMigrationColumn(defaultVal string) string {
+	return fmt.Sprintf("ALTER TABLE %s ADD COLUMN IF NOT EXISTS migration TEXT NOT NULL DEFAULT '%s';", TableName(), defaultVal)
+}
+
 func (pg PostgresDialect) createVersionTableSQL() string {
 	return fmt.Sprintf(`CREATE TABLE %s (
             	id serial NOT NULL,
@@ -87,6 +92,10 @@ func (pg PostgresDialect) deleteVersionSQL() string {
 
 // MySQLDialect struct.
 type MySQLDialect struct{}
+
+func (m MySQLDialect) addMigrationColumn(defaultVal string) string {
+	return fmt.Sprintf("ALTER TABLE %s ADD COLUMN IF NOT EXISTS migration TEXT NOT NULL DEFAULT '%s';", TableName(), defaultVal)
+}
 
 func (m MySQLDialect) createVersionTableSQL() string {
 	return fmt.Sprintf(`CREATE TABLE %s (
@@ -123,6 +132,10 @@ func (m MySQLDialect) deleteVersionSQL() string {
 // Sqlite3Dialect struct.
 type Sqlite3Dialect struct{}
 
+func (m Sqlite3Dialect) addMigrationColumn(defaultVal string) string {
+	return fmt.Sprintf("ALTER TABLE %s ADD COLUMN IF NOT EXISTS migration TEXT NOT NULL DEFAULT '%s';", TableName(), defaultVal)
+}
+
 func (m Sqlite3Dialect) createVersionTableSQL() string {
 	return fmt.Sprintf(`CREATE TABLE %s (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -156,6 +169,10 @@ func (m Sqlite3Dialect) deleteVersionSQL() string {
 
 // RedshiftDialect struct.
 type RedshiftDialect struct{}
+
+func (rs RedshiftDialect) addMigrationColumn(defaultVal string) string {
+	return fmt.Sprintf("ALTER TABLE %s ADD COLUMN migration TEXT NOT NULL DEFAULT '%s';", TableName(), defaultVal)
+}
 
 func (rs RedshiftDialect) createVersionTableSQL() string {
 	return fmt.Sprintf(`CREATE TABLE %s (
@@ -191,6 +208,10 @@ func (rs RedshiftDialect) deleteVersionSQL() string {
 
 // TiDBDialect struct.
 type TiDBDialect struct{}
+
+func (m TiDBDialect) addMigrationColumn(defaultVal string) string {
+	return fmt.Sprintf("ALTER TABLE %s ADD COLUMN IF NOT EXISTS migration TEXT NOT NULL DEFAULT %s;", TableName(), defaultVal)
+}
 
 func (m TiDBDialect) createVersionTableSQL() string {
 	return fmt.Sprintf(`CREATE TABLE %s (

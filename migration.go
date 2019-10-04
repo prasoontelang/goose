@@ -1,8 +1,10 @@
 package goose
 
 import (
+	"bufio"
 	"database/sql"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -31,6 +33,10 @@ type Migration struct {
 	DownFn     func(*sql.Tx) error // Down go migration function
 }
 
+var (
+	gooseDemarcation = []string{"-- +goose Up", "-- +goose Down"}
+)
+
 func (m *Migration) String() string {
 	return fmt.Sprintf(m.Source)
 }
@@ -49,6 +55,25 @@ func (m *Migration) Down(db *sql.DB) error {
 		return err
 	}
 	return nil
+}
+
+func readLines(r io.Reader) (stmts []string, err error) {
+	scanner := bufio.NewScanner(r)
+	scanBuf := bufferPool.Get().([]byte)
+	defer bufferPool.Put(scanBuf)
+
+	scanner.Buffer(scanBuf, scanBufSize)
+
+	for scanner.Scan() {
+		line := scanner.Text()
+		stmts = append(stmts, strings.TrimSpace(line))
+	}
+
+	if err := scanner.Err(); err != nil {
+		return nil, errors.Wrapf(err, "scanner.Scan: reading line from the buffer")
+	}
+
+	return stmts, nil
 }
 
 func (m *Migration) run(db *sql.DB, direction bool) error {
@@ -70,15 +95,10 @@ func (m *Migration) run(db *sql.DB, direction bool) error {
 		if err != nil {
 			return errors.Wrapf(err, "ERROR %v: failed to set offset to 0. Returned: %d", filepath.Base(m.Source), newOffset)
 		}
-		undoStatements, _, err := parseSQLMigration(f, !direction)
-		if err != nil {
-			return errors.Wrapf(err, "ERROR %v: failed to parse SQL undo migration file", filepath.Base(m.Source))
-		}
 
-		// goose type for the undo statements
-		if direction {
-			gooseDemarcation := []string{"-- +goose Up", "-- +goose Down"}
-			undoStatements = append(gooseDemarcation, undoStatements...)
+		undoStatements, err := readLines(f)
+		if err != nil {
+			return errors.Wrapf(err, "ERROR %v: reading the migration file", filepath.Base(m.Source))
 		}
 
 		if err := runSQLMigration(db, statements, useTx, undoStatements, m.Version, direction); err != nil {

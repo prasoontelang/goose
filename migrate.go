@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"runtime"
 	"sort"
+	"strings"
 	"time"
 
 	"github.com/pkg/errors"
@@ -316,4 +317,20 @@ func GetDBVersion(db *sql.DB) (int64, error) {
 	}
 
 	return version, nil
+}
+
+// UpdateGooseTable is used for updating the metadata of Goose itself
+func UpdateGooseTable(db *sql.DB) error {
+	txn, err := db.Begin()
+	if err != nil {
+		return err
+	}
+
+	d := GetDialect()
+	if _, err := txn.Exec(d.addMigrationColumn(strings.Join(gooseDemarcation, "\n"))); err != nil {
+		txn.Rollback()
+		return err
+	}
+
+	return txn.Commit()
 }
