@@ -102,6 +102,7 @@ Options:
 
 	usageCommands = `
 Commands:
+    automatic            (for SQL only) Compare DB version and SQL files to decide Migration/Rollback of the DB
     up                   Migrate the DB to the most recent version available
     up-to VERSION        Migrate the DB to a specific VERSION
     down                 Roll back the version by 1
