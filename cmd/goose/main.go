@@ -6,7 +6,7 @@ import (
 	"log"
 	"os"
 
-	"github.com/pressly/goose"
+	"github.com/prasoontelang/goose"
 )
 
 var (
@@ -104,6 +104,7 @@ Options:
 
 	usageCommands = `
 Commands:
+    automatic            (for SQL only) Compare DB version and SQL files to decide Migration/Rollback of the DB
     up                   Migrate the DB to the most recent version available
     up-by-one            Migrate the DB up by 1
     up-to VERSION        Migrate the DB to a specific VERSION
