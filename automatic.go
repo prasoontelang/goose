@@ -3,8 +3,7 @@ package goose
 import (
 	"database/sql"
 	"fmt"
-	"io/ioutil"
-	"path/filepath"
+	"strings"
 
 	"github.com/pkg/errors"
 )
@@ -31,7 +30,7 @@ func Automatic(db *sql.DB, dir string) error {
 		}
 	} else if currentVersion > topVersion {
 		// dump the SQL files stored in the DB
-		if err = dumpSQLFiles(db, dir, topVersion+1, currentVersion); err != nil {
+		if err = dumpSQLFiles(db, topVersion+1); err != nil {
 			return errors.Wrapf(err, "dumpSQLFiles: downloading migrations from %d->%d", topVersion+1, currentVersion)
 		}
 
@@ -45,7 +44,7 @@ func Automatic(db *sql.DB, dir string) error {
 	return nil
 }
 
-func dumpSQLFiles(db *sql.DB, dir string, fromVersion int64, toVersion int64) error{
+func dumpSQLFiles(db *sql.DB, fromVersion int64) error{
 	rows, err := GetDialect().dbVersionQuery(db)
 	if err != nil {
 		return errors.Wrapf(err, "dbVersionQuery: getting all applied DB versions")
@@ -60,9 +59,16 @@ func dumpSQLFiles(db *sql.DB, dir string, fromVersion int64, toVersion int64) er
 		if row.VersionID < fromVersion || row.VersionID == 0 {
 			break
 		}
-		fileName := filepath.Join(dir, fmt.Sprintf("%d_down_version.sql", row.VersionID))
-		if err = ioutil.WriteFile(fileName, []byte(row.DownData), 0666); err != nil {
-			return errors.Wrapf(err, "WriteFile: writing goose down information to %s", fileName)
+
+		log.Println("Performing goose down: ", row.DownData)
+		r := strings.NewReader(row.DownData)
+		statements, useTx, err := parseSQLMigration(r, false)
+		if err != nil {
+			return errors.Wrapf(err, "ERROR %v: failed to parse SQL migration file from DB")
+		}
+
+		if err := runSQLMigration(db, statements, useTx, statements, row.VersionID, false); err != nil {
+			return errors.Wrapf(err, "ERROR %v: failed to run down SQL migration from DB")
 		}
 	}
 
