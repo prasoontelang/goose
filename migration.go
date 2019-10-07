@@ -1,8 +1,10 @@
 package goose
 
 import (
+	"bufio"
 	"database/sql"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -16,6 +18,7 @@ import (
 type MigrationRecord struct {
 	VersionID int64
 	TStamp    time.Time
+	DownData  string
 	IsApplied bool // was this a result of up() or down()
 }
 
@@ -29,6 +32,10 @@ type Migration struct {
 	UpFn       func(*sql.Tx) error // Up go migration function
 	DownFn     func(*sql.Tx) error // Down go migration function
 }
+
+var (
+	gooseDemarcation = []string{"-- +goose Up", "-- +goose Down"}
+)
 
 func (m *Migration) String() string {
 	return fmt.Sprintf(m.Source)
@@ -50,6 +57,25 @@ func (m *Migration) Down(db *sql.DB) error {
 	return nil
 }
 
+func readLines(r io.Reader) (stmts []string, err error) {
+	scanner := bufio.NewScanner(r)
+	scanBuf := bufferPool.Get().([]byte)
+	defer bufferPool.Put(scanBuf)
+
+	scanner.Buffer(scanBuf, scanBufSize)
+
+	for scanner.Scan() {
+		line := scanner.Text()
+		stmts = append(stmts, strings.TrimSpace(line))
+	}
+
+	if err := scanner.Err(); err != nil {
+		return nil, errors.Wrapf(err, "scanner.Scan: reading line from the buffer")
+	}
+
+	return stmts, nil
+}
+
 func (m *Migration) run(db *sql.DB, direction bool) error {
 	switch filepath.Ext(m.Source) {
 	case ".sql":
@@ -64,7 +90,18 @@ func (m *Migration) run(db *sql.DB, direction bool) error {
 			return errors.Wrapf(err, "ERROR %v: failed to parse SQL migration file", filepath.Base(m.Source))
 		}
 
-		if err := runSQLMigration(db, statements, useTx, m.Version, direction); err != nil {
+		// get the whole migration statements which will be persisted in the DB for this version
+		newOffset, err := f.Seek(0, 0)
+		if err != nil {
+			return errors.Wrapf(err, "ERROR %v: failed to set offset to 0. Returned: %d", filepath.Base(m.Source), newOffset)
+		}
+
+		migrationStmts, err := readLines(f)
+		if err != nil {
+			return errors.Wrapf(err, "ERROR %v: reading the migration file", filepath.Base(m.Source))
+		}
+
+		if err := runSQLMigration(db, statements, useTx, migrationStmts, m.Version, direction); err != nil {
 			return errors.Wrapf(err, "ERROR %v: failed to run SQL migration", filepath.Base(m.Source))
 		}
 

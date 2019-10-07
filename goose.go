@@ -24,6 +24,10 @@ func SetVerbose(v bool) {
 
 // Run runs a goose command.
 func Run(command string, db *sql.DB, dir string, args ...string) error {
+	// (prasoontelang) this add Migration column is used only to upgrade goose DB itself
+	if err := UpdateGooseTable(db); err != nil {
+		log.Printf("Error: %+v. UpdateGooseTable: updating goose's metadata.\n", err)
+	}
 	switch command {
 	case "up":
 		if err := Up(db, dir); err != nil {
@@ -91,6 +95,10 @@ func Run(command string, db *sql.DB, dir string, args ...string) error {
 		}
 	case "version":
 		if err := Version(db, dir); err != nil {
+			return err
+		}
+	case "automatic":
+		if err := Automatic(db, dir); err != nil {
 			return err
 		}
 	default:
