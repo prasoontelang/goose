@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"runtime"
 	"sort"
+	"strings"
 	"time"
 
 	"github.com/pkg/errors"
@@ -251,7 +252,7 @@ func EnsureDBVersion(db *sql.DB) (int64, error) {
 
 	for rows.Next() {
 		var row MigrationRecord
-		if err = rows.Scan(&row.VersionID, &row.IsApplied); err != nil {
+		if err = rows.Scan(&row.VersionID, &row.IsApplied, &row.DownData); err != nil {
 			return 0, errors.Wrap(err, "failed to scan row")
 		}
 
@@ -300,7 +301,7 @@ func createVersionTable(db *sql.DB) error {
 
 	version := 0
 	applied := true
-	if _, err := txn.Exec(d.insertVersionSQL(), version, applied); err != nil {
+	if _, err := txn.Exec(d.insertVersionSQL(), version, applied, dropVersionTableSQL()); err != nil {
 		txn.Rollback()
 		return err
 	}
@@ -316,4 +317,20 @@ func GetDBVersion(db *sql.DB) (int64, error) {
 	}
 
 	return version, nil
+}
+
+// UpdateGooseTable is used for updating the metadata of Goose itself
+func UpdateGooseTable(db *sql.DB) error {
+	txn, err := db.Begin()
+	if err != nil {
+		return err
+	}
+
+	d := GetDialect()
+	if _, err := txn.Exec(d.addMigrationColumn(strings.Join(gooseDemarcation, "\n"))); err != nil {
+		txn.Rollback()
+		return err
+	}
+
+	return txn.Commit()
 }

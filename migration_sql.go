@@ -3,6 +3,7 @@ package goose
 import (
 	"database/sql"
 	"regexp"
+	"strings"
 
 	"github.com/pkg/errors"
 )
@@ -15,7 +16,7 @@ import (
 //
 // All statements following an Up or Down directive are grouped together
 // until another direction directive is found.
-func runSQLMigration(db *sql.DB, statements []string, useTx bool, v int64, direction bool) error {
+func runSQLMigration(db *sql.DB, statements []string, useTx bool, migrationStmts []string, v int64, direction bool) error {
 	if useTx {
 		// TRANSACTION.
 
@@ -23,7 +24,7 @@ func runSQLMigration(db *sql.DB, statements []string, useTx bool, v int64, direc
 
 		tx, err := db.Begin()
 		if err != nil {
-			errors.Wrap(err, "failed to begin transaction")
+			return errors.Wrap(err, "failed to begin transaction")
 		}
 
 		for _, query := range statements {
@@ -36,7 +37,7 @@ func runSQLMigration(db *sql.DB, statements []string, useTx bool, v int64, direc
 		}
 
 		if direction {
-			if _, err := tx.Exec(GetDialect().insertVersionSQL(), v, direction); err != nil {
+			if _, err := tx.Exec(GetDialect().insertVersionSQL(), v, direction, strings.Join(migrationStmts, "\n")); err != nil {
 				verboseInfo("Rollback transaction")
 				tx.Rollback()
 				return errors.Wrap(err, "failed to insert new goose version")
@@ -64,7 +65,7 @@ func runSQLMigration(db *sql.DB, statements []string, useTx bool, v int64, direc
 			return errors.Wrapf(err, "failed to execute SQL query %q", clearStatement(query))
 		}
 	}
-	if _, err := db.Exec(GetDialect().insertVersionSQL(), v, direction); err != nil {
+	if _, err := db.Exec(GetDialect().insertVersionSQL(), v, direction, strings.Join(migrationStmts, "\n")); err != nil {
 		return errors.Wrap(err, "failed to insert new goose version")
 	}
 
