@@ -29,13 +29,9 @@ func Automatic(db *sql.DB, dir string) error {
 			return errors.Wrapf(err, "Up: migrating from %d -> %d", currentVersion, topVersion)
 		}
 	} else if currentVersion > topVersion {
-		// dump the SQL files stored in the DB
+		// down using the SQL files stored in the DB
 		if err = downFromDb(db, topVersion+1); err != nil {
 			return errors.Wrapf(err, "downFromDb: downloading migrations from %d->%d", topVersion+1, currentVersion)
-		}
-
-		if err = DownTo(db, dir, topVersion); err != nil {
-			return errors.Wrapf(err, "DownTo: down versioning the DB to %d", topVersion)
 		}
 	} else {
 		fmt.Printf("goose: no migrations to run. current version: %d, top most migration: %d\n", currentVersion, topVersion)
